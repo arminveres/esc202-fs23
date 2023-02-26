@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+from typing import Any
 
 """
 Instructions
@@ -15,25 +18,32 @@ you go. Partition alternately in x and y dimensions, or simply partition the lon
 the given cell.
 """
 
+_, gAxis = plt.subplots()
 
 class Particle:
-    def __init__(self, r):
-        self.r = r  # positionn of the particle [x, y]
+    def __init__(self, r: np.ndarray):
+        self.r: np.ndarray = r  # positionn of the particle [x, y]
         self.rho = 0.0  # density of the particle
         # ...  more properties of the particle
 
 
 class Cell:
-    def __init__(self, rLow, rHigh, lower, upper):
-        self.rLow = rLow  # [xMin, yMin]
-        self.rHigh = rHigh  # [yMax, yMax]
-        self.iLower = lower  # index to first particle in particle array
-        self.iUpper = upper  # index to last particle in particle array
-        self.pLower = None  # reference to tree cell for lower part
-        self.pUpper = None  # reference to tree cell for upper part
+    def __init__(
+        self,
+        regionLowerBound: np.ndarray,
+        regionHigherBound: np.ndarray,
+        lower_index: int,
+        upper_index: int,
+    ):
+        self.regionLowerBound = regionLowerBound  # [xMin, yMin]
+        self.regionHigherBound = regionHigherBound  # [xMax, yMax]
+        self.iLower = lower_index  # index to first particle in particle array
+        self.iUpper = upper_index  # index to last particle in particle array
+        self.lowerCell = None  # reference to tree cell for lower part
+        self.upperCell = None  # reference to tree cell for upper part
 
 
-def partition(A: np.array, i: int, j: int, v: np.number, d: int):
+def partition(A: np.ndarray[Any, Particle], i: int, j: int, v: np.number, d: int):
     """
     params:
         A: array of all particles
@@ -46,126 +56,116 @@ def partition(A: np.array, i: int, j: int, v: np.number, d: int):
     """
     interval = A[i : j + 1]
     # This index will keep track of the last 'greater than v' value
-    i_idx = 0
+    lagger = 0
     # Keeps track of the current index
-    j_idx = 0
+    checker = 0
     for particle in interval:
         # particle position smaller, swap needed
         if particle.r[d] < v:
             # only swap if not same index, otherwise not change made
-            if i_idx < j_idx:
+            if lagger < checker:
                 # increase the i index until a larger value is found, in order to be swappable
-                while interval[i_idx].r[d] < v and i_idx < j_idx:
-                    i_idx += 1
+                while interval[lagger].r[d] < v and lagger < checker:
+                    lagger += 1
                 # make the swap
-                interval[i_idx], interval[j_idx] = interval[j_idx], interval[i_idx]
+                interval[lagger], interval[checker] = (
+                    interval[checker],
+                    interval[lagger],
+                )
         # increase j index
-        j_idx += 1
+        checker += 1
 
-    # for particle in A:
-    #     print(particle.r[d])
-    # print(f"i: {i_idx}, j: {j_idx}")
-
-    return i_idx  # return s
+    return lagger + i  # readd lower index to correct index
 
 
-def treebuild(A: np.ndarray[Particle], root: Cell, dim: int):
+def buildtree(A: np.ndarray[Any, Particle], root: Cell, dim: int):
     """
     Build a Tree out a list of particles
     """
-    v = 0.5 * (root.rLow[dim] + root.rHigh[dim])
+
+    v = 0.5 * (root.regionLowerBound[dim] + root.regionHigherBound[dim])
+    # print("v: ", v)
+
     s = partition(A, root.iLower, root.iUpper, v, dim)
+    # print("s: ", s)
+    # print("adj: s: ", s)
+
     # may have two parts: lower..s-1 and s..upper
-    # if there is a lower part:
-    if len(A[root.iLower : s - 1]) > 0:
-        #  TODO: (aver) Correctly instantiale Cells in recursive call
+    if s != 0 and len(A[root.iLower : s - 1]) > 0:  # check for a lower part
         cLow = Cell(A[root.iLower].r, A[s - 1].r, root.iLower, s - 1)
-        root.pLower = cLow
+        root.lowerCell = cLow
         # if there are more than 8 particles in cell:
         if len(A[root.iLower : s - 1]) >= 8:
-            treebuild(A, cLow, 1 - dim)
-    # if there is an upper part:
-    if len(A[s : root.iUpper]) > 0:
+            buildtree(A, cLow, 1 - dim)
+    if len(A[s : root.iUpper]) > 0:  # check for an upper part
         cHigh = Cell(A[s].r, A[root.iUpper].r, s, root.iUpper)
-        root.pUpper = cHigh
+        root.upperCell = cHigh
         # if there are more than 8 particles in cell:
         if len(A[s : root.iUpper]) >= 8:
-            treebuild(A, cHigh, 1 - dim)
-    # graphical representation of tree
+            buildtree(A, cHigh, 1 - dim)
 
 
-def plottree(root: Cell):
-    #  TODO: (aver) implement plotting function
-    pass
+def plot_cell_tree(
+    # axs: plt.Axes,
+    particles: np.ndarray,
+    root: Cell,
+    leaf: str = "root",
+    dim: int = 0,
+    level: int = 0,
+):
+    global gAxis
+    # TODO: (aver) use one single plot and plot the dividing lines onto it!
+    fig, axs = plt.subplots()
+    interval = particles[root.iLower : root.iUpper + 1]
+    v = 0.5 * (root.regionLowerBound[dim] + root.regionHigherBound[dim])
+    side = 1 if leaf == "upper" else 0
 
+    # axs[level][side].set_title(f"At tree level: {level}, side: {leaf}")
+    axs.set_title(f"At tree level: {level}, side: {leaf}")
 
-# Tests
-#  TODO: (aver) implement test cases
+    # set plotting limit and add padding
+    # axs.set_xlim(root.regionLowerBound[0] - 1, root.regionHigherBound[0] + 1)
+    # axs.set_ylim(root.regionLowerBound[1] - 1, root.regionHigherBound[1] + 1)
 
+    for part in interval:
+        axs.scatter(part.r[0], part.r[1])
 
-def test1() -> bool:
-    # A = initialize with particle with sequential coordinates in x, same yMax
-    A = None
-    s = partition(A, 0, 10, 0.5, 0)
-    return s == 5
+    if dim == 0:
+        axs.axvline(x=v, color="red")
+        gAxis.axvline(x=v*(root.regionLowerBound[0]+ regionHigherBound[0]), color="red")
+    elif dim == 1:
+        axs.axhline(y=v, color="red")
+        gAxis.axhline(y=v*(root.regionLowerBound[1]+ regionHigherBound[1]), color="red")
 
+    if root.upperCell != None:
+        plot_cell_tree(A, root.upperCell, "upper", 1 - dim, level + 1)
+    if root.lowerCell != None:
+        plot_cell_tree(A, root.lowerCell, "lower", 1 - dim, level + 1)
 
-def test2() -> bool:
-    return False
-
-
-def run_all_tests() -> bool:
-    if not test1():
-        return False
-    return True
-
-
-# add other testcases
 
 if __name__ == "__main__":
-    r = np.array([0.8, 1.0])
-    p = Particle(r)
-    r = np.array([0.6, 0.9])
-    p2 = Particle(r)
-    r = np.array([0.2, 0.8])
-    p3 = Particle(r)
-    r = np.array([0.3, 0.8])
-    p4 = Particle(r)
-    r = np.array([0.3, 0.7])
-    p5 = Particle(r)
-    r = np.array([0.4, 0.7])
-    p6 = Particle(r)
-    r = np.array([0.9, 0.6])
-    p7 = Particle(r)
-    r = np.array([0.5, 0.6])
-    p8 = Particle(r)
-    r = np.array([0.3, 0.5])
-    p9 = Particle(r)
-    r = np.array([0.5, 0.4])
-    p10 = Particle(r)
 
-    # Create array A with particles
-    A = np.array([p, p2, p3, p4, p5, p6, p7, p8, p9, p10])
+    A: np.ndarray = np.array([])
     # Build the tree
+    for _ in range(20):
+        A = np.append(A, np.array(Particle(np.random.rand(2))))
 
-    rLow = np.array([0, 0])
-    rHigh = np.array([1, 1])
+    regionLowerBound = np.array([0, 0])
+    regionHigherBound = np.array([1, 1])
     lower = 0
     upper = A.size - 1
-    root = Cell(rLow, rHigh, lower, upper)
+    root = Cell(regionLowerBound, regionHigherBound, lower, upper)
     dim = 0
 
-    # # before
-    # A_len = len(A) - 1
-    # print(A_len)
-    # for particle in A:
-    #     print(particle.r[1])
-    # print("\n")
-    # partition(A, 0, A_len, 0.8, 1)
-    # print("\n")
-    # # after
-    # for particle in A:
-    #     print(particle.r[1])
+    buildtree(A, root, dim)
 
-    # treebuild(A, root, dim)
-    # plottree(root)
+    # fig, axs = plt.subplots(nrows=gNrSubplots, ncols=2)
+    # plot_cell_tree(axs, A, root)
+
+    for part in A:
+        gAxis.scatter(part.r[0], part.r[1])
+
+    # fig, axs = plt.subplots()
+    plot_cell_tree(A, root)
+
+    plt.show()
