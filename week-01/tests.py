@@ -15,7 +15,7 @@ def test_noParticles() -> bool:
     # A = initialize with particle with sequential coordinates in x, same yMax
     A = np.array([])
     s = partition(A, 0, 0, 0.5, 0)
-    return s == 0
+    return s == None 
 
 
 def test_allParticlesOnOneSide() -> bool:
