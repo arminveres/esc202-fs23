@@ -4,7 +4,7 @@ import numpy as np
 # my modules
 from cell import Cell
 from particle import Particle
-from heap_pq import PriorityQueue
+from prio_queue import PriorityQueue
 
 # Implement the k nearest neighbor search. Use the priority queue given in the Python template and
 # implement “replace” and “key” functions. Use the particle to cell distance function from the
@@ -13,7 +13,11 @@ from heap_pq import PriorityQueue
 
 
 def neighbor_search_periodic(
-    prio_queue, root: Cell, particles: np.ndarray[Any, Particle], r, period
+    prio_queue: PriorityQueue,
+    root: Cell,
+    particles: np.ndarray[Any, Particle],
+    r: np.ndarray[int, int],
+    period,
 ):
     # walk the closest image first (at offset=[0, 0])
     for y in [0.0, -period[1], period[1]]:
@@ -23,53 +27,93 @@ def neighbor_search_periodic(
 
 
 def neighbor_search(
-    prio_queue, root: Cell, particles: np.ndarray[Any, Particle], radius, radius_offset
+    prio_queue: PriorityQueue,
+    root: Cell,
+    particles: np.ndarray[Any, Particle],
+    rParticle: np.ndarray[int, int],
+    rParticleOffset: np.ndarray[int, int],
 ):
     """
-    Do a nearest neighbor search for particle at  'r' in the tree 'root'
-    using the priority queue 'pq'. 'rOffset' is the offset of the root
-    node from unit cell, used for periodic boundaries.
+    Do a nearest neighbor search for particle at 'r' in the tree 'root' using the priority queue
+    'pq'.
+    'rOffset' is the offset of the root node from unit cell, used for periodic boundaries.
     'particles' is the array of all particles.
     """
     if root is None:
         return
 
-    ri = radius + radius_offset
-    if root.pLower is not None and root.pUpper is not None:
-        d2_lower = dist2(root.pLower.rc, ri)
-        d2_upper = dist2(root.pUpper.rc, ri)
+    ri: np.ndarray[int, int] = rParticle + rParticleOffset
+
+    if root.lowerCell is not None and root.upperCell is not None:
+        bound_lower = [
+            root.lowerCell.regionHigherBound[0] - ri[0],
+            root.lowerCell.regionHigherBound[1] - ri[1],
+        ]
+        d2_lower = dist2(root.lowerCell.rc, ri, bound_lower)
+        bound_upper = [
+            root.upperCell.regionHigherBound[0] - ri[0],
+            root.upperCell.regionHigherBound[1] - ri[1],
+        ]
+        d2_upper = dist2(root.upperCell.rc, ri, bound_upper)
+        # d2_lower = root.lowerCell.dist_center_to_other(ri)
+        # d2_upper = root.upperCell.dist_center_to_other(ri)
         if d2_lower <= d2_upper:
-            if root.pLower.celldist2(ri) < prio_queue.key():
+            if root.lowerCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.pLower, particles, radius, radius_offset
+                    prio_queue, root.lowerCell, particles, rParticle, rParticleOffset
                 )
-            if root.pUpper.celldist2(ri) < prio_queue.key():
+            if root.upperCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.pUpper, particles, radius, radius_offset
+                    prio_queue, root.upperCell, particles, rParticle, rParticleOffset
                 )
         else:
-            if root.pUpper.celldist2(ri) < prio_queue.key():
+            if root.upperCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.pUpper, particles, radius, radius_offset
+                    prio_queue, root.upperCell, particles, rParticle, rParticleOffset
                 )
-            if root.pLower.celldist2(ri) < prio_queue.key():
+            if root.lowerCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.pLower, particles, radius, radius_offset
+                    prio_queue, root.lowerCell, particles, rParticle, rParticleOffset
                 )
-    elif root.pLower is not None:
-        neighbor_search(prio_queue, root.pLower, particles, radius, radius_offset)
-    elif root.pUpper is not None:
-        neighbor_search(prio_queue, root.pUpper, particles, radius, radius_offset)
+    elif root.lowerCell is not None:
+        neighbor_search(
+            prio_queue, root.lowerCell, particles, rParticle, rParticleOffset
+        )
+    elif root.upperCell is not None:
+        neighbor_search(
+            prio_queue, root.upperCell, particles, rParticle, rParticleOffset
+        )
     else:  # root is a leaf cell
+        # for each particle get the distance, check if smaller than the largest key and replace it
         for j in range(root.iLower, root.iUpper):
-            d2 = dist2(particles[j].r, ri)
+            # d2 = dist2(particles[j].r, ri)
+            # d2 = particles[j].dist_center_to_other(ri)
+
+            bound = [particles[j].r[0] - ri[0], particles[j].r[1] - ri[1]]
+            d2 = dist2(particles[j].r, ri, bound)
             if d2 < prio_queue.key():
-                prio_queue.replace(d2, j, particles[j].r - radius_offset)
-    # TODO: for pq write a wrapper class that implements key() and replace() using heapq package
+                prio_queue.replace(d2, j, particles[j].r - rParticleOffset)
 
 
-def dist2(pos1: int, pos2: int):
+def dist2(
+    center_pos: np.ndarray[np.number, np.number],
+    particle_pos: np.ndarray[np.number, np.number],
+    bounding_length: np.ndarray[np.number, np.number],
+):
     """
     Euclidian/square distance of 2 particles
     """
-    raise NotImplementedError
+
+    distance_squared = 0
+    for dimension in range(2):
+        tmp = (abs(center_pos[dimension] - particle_pos[dimension]) - bounding_length[dimension])
+        if tmp > 0:
+            distance_squared += tmp**2
+    return distance_squared
+
+    # x = np.abs(center_pos[0] - particle_pos[0])
+    # y = np.abs(center_pos[1] - particle_pos[1])
+    # # Periodic boundaries
+    # x = np.min(x, 1 - x)
+    # y = np.min(y, 1 - y)
+    # return np.sqrt(x * x + y * y)
