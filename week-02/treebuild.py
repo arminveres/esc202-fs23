@@ -7,29 +7,6 @@ from particle import Particle
 from cell import Cell
 
 
-# def partition(A, i, j, v, d):
-#     """
-#       A: array of all particles
-#       i: start index of subarray for partition
-#       j: end index (inclusive) for subarray for partition
-#       v: value for partition e.g. 0.5
-#       d: dimension to use for partition, 0 (for x) or 1 (for y)
-#     """
-#     subA = A[i : j + 1]
-#     start, end = 0, len(subA) - 1
-#     while start <= end:
-#         if subA[start].r[d] < v and subA[end].r[d] >= v:
-#             start += 1; end -= 1;
-#         elif subA[start].r[d] >= v and subA[end].r[d] >= v:
-#             end -= 1
-#         elif subA[start].r[d] < v and subA[end].r[d] < v:
-#             start += 1
-#         elif subA[start].r[d] >= v and subA[end].r[d] < v:
-#             subA[start], subA[end] = subA[end], subA[start]
-#             start += 1; end -= 1
-#     return start
-
-
 def partition(A: np.ndarray[Any, Particle], i: int, j: int, v: np.number, d: int):
     """
     params:
@@ -70,40 +47,55 @@ def partition(A: np.ndarray[Any, Particle], i: int, j: int, v: np.number, d: int
     return lagger + i  # readd lower index to correct index
 
 
-def build_tree(A: np.ndarray[Any, Particle], root: Cell, dim: int):
+def build_tree(A, root: Cell, dim):
+    """
+    Builds a binary tree from a given root cell by partitioning a global list of particles.
+    :param A: global list of particles
+    :param root: initial cell containing all particles
+    :param dim: dimension to partition by
+    :return:
+    """
     v = 0.5 * (root.regionLowerBound[dim] + root.regionHigherBound[dim])
     s = partition(A, root.iLower, root.iUpper, v, dim)
 
-    # early return condition
-    if not s:
-        return
+    # New cell bounds are set depending on the dimension.
+    if dim == 0:
+        rLow_Lower = root.regionLowerBound
+        rHigh_Lower = np.array([v, root.regionHigherBound[1]])
+        rLow_Upper = np.array([v, root.regionLowerBound[1]])
+        rHigh_Upper = root.regionHigherBound
+    else:
+        rLow_Lower = root.regionLowerBound
+        rHigh_Lower = np.array([root.regionHigherBound[0], v])
+        rLow_Upper = np.array([root.regionLowerBound[0], v])
+        rHigh_Upper = root.regionHigherBound
 
-    # check for a lower part
-    # may have two parts: lower..s-1 and s..upper
-    if s != 0:
-        new_higher_bound = root.regionHigherBound[:]
-        new_higher_bound[dim] = v
-        cLow = Cell(root.regionLowerBound, new_higher_bound, root.iLower, s - 1)
+    # The left cell is generated if a left partition exists and the branching continued.
+    if s > root.iLower:
+        cLow = Cell(rLow_Lower, rHigh_Lower, root.iLower, s - 1)
         root.lowerCell = cLow
-        if len(A[:s]) > 8:
-            build_tree(A[:s], cLow, 1 - dim)
+        if len(A[root.iLower:s]) > 8:
+            build_tree(A, cLow, 1 - dim)
 
-    # Check for an upper part
-    if s <= len(A):
-        new_lower_bound = root.regionLowerBound[:]
-        new_lower_bound[dim] = v
-        cHigh = Cell(new_lower_bound, root.regionHigherBound, 0, root.iUpper - s)
+    # The right cell is generated if a right partition exists and the branching continued.
+    if s <= root.iUpper:
+        cHigh = Cell(rLow_Upper, rHigh_Upper, s, root.iUpper)
         root.upperCell = cHigh
-        if len(A[s:]) > 8:
-            build_tree(A[s:], cHigh, 1 - dim)
+        if len(A[s:root.iUpper + 1]) > 8:
+            build_tree(A, cHigh, 1 - dim)
 
 
-def plot_tree(root: Cell, A):
+def plot_tree(axis, root: Cell, A):
     """
     Scatter points and call recursive rectangle plotter
     """
+    cntr = 0
     for particle in A:
-        plt.scatter(particle.r[0], particle.r[1], color="red")
+        if cntr == 0:
+            axis.scatter(particle.r[0], particle.r[1], color="red", label='points')
+        else:
+            axis.scatter(particle.r[0], particle.r[1], color="red")
+        cntr += 1
     plot_rectangles(root)
 
 

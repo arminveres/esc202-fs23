@@ -31,4 +31,4 @@ class Particle:
         return self.key >= other.key
 
     def __repr__(self):
-        return f"Pos: {self.r}, Dens: {self.rho}, PQ Key: {self.key}"
+        return f"Pos: {self.r}, Dens: {self.rho}, PQ Key: {self.key}\n"
