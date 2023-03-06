@@ -45,7 +45,6 @@ def neighbor_search(
     ri: np.ndarray[int, int] = rootParticle + rootParticleOffset
 
     if root.lowerCell is not None and root.upperCell is not None:
-
         # bound_lower = [
         #     root.lowerCell.regionHigherBound[0] - ri[0],
         #     root.lowerCell.regionHigherBound[1] - ri[1],
@@ -63,20 +62,36 @@ def neighbor_search(
         if d2_lower <= d2_upper:
             if root.lowerCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.lowerCell, particles, rootParticle, rootParticleOffset
+                    prio_queue,
+                    root.lowerCell,
+                    particles,
+                    rootParticle,
+                    rootParticleOffset,
                 )
             if root.upperCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.upperCell, particles, rootParticle, rootParticleOffset
+                    prio_queue,
+                    root.upperCell,
+                    particles,
+                    rootParticle,
+                    rootParticleOffset,
                 )
         else:
             if root.upperCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.upperCell, particles, rootParticle, rootParticleOffset
+                    prio_queue,
+                    root.upperCell,
+                    particles,
+                    rootParticle,
+                    rootParticleOffset,
                 )
             if root.lowerCell.celldist2(ri) < prio_queue.key():
                 neighbor_search(
-                    prio_queue, root.lowerCell, particles, rootParticle, rootParticleOffset
+                    prio_queue,
+                    root.lowerCell,
+                    particles,
+                    rootParticle,
+                    rootParticleOffset,
                 )
     elif root.lowerCell is not None:
         neighbor_search(
@@ -87,11 +102,10 @@ def neighbor_search(
             prio_queue, root.upperCell, particles, rootParticle, rootParticleOffset
         )
     else:  # root is a leaf cell
-        for part in particles:
-            if root.particle_is_inside(part):
-                distance_squared = dist2(part.r, ri)
-                if distance_squared < prio_queue.key() and abs(distance_squared) != 0:
-                    prio_queue.replace(distance_squared, part.r)# + rootParticleOffset)
+        for part in particles[root.iLower : root.iUpper + 1]:
+            distance_squared = dist2(part.r, ri)
+            if distance_squared < prio_queue.key():
+                prio_queue.replace(distance_squared, part.r)
 
 
 def dist2(

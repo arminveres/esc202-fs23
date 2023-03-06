@@ -7,13 +7,12 @@ from cell import Cell
 from prio_queue import PriorityQueue
 from treebuild import build_tree, plot_tree
 from k_nearest_neighbours import neighbor_search, neighbor_search_periodic
-# from k_nearest_neighbours import neighbor_search_2
 
 if __name__ == "__main__":
     fig, axis = plt.subplots()
 
     A: np.ndarray = np.array([])
-    for _ in range(200):
+    for _ in range(1000):
         A = np.append(A, np.array(Particle(np.random.rand(2))))
 
     root = Cell(
@@ -49,4 +48,5 @@ if __name__ == "__main__":
     # color the particle we are looking around for
     axis.scatter(particle_to_search.r[0], particle_to_search.r[1], color='b', label='origin')
     axis.legend()
+    axis.axis("equal")
     plt.show()

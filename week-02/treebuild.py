@@ -44,7 +44,7 @@ def partition(A: np.ndarray[Any, Particle], i: int, j: int, v: np.number, d: int
         # increase j index
         checker += 1
 
-    return lagger + i  # readd lower index to correct index
+    return lagger + i + 1  # readd lower index to correct index
 
 
 def build_tree(A, root: Cell, dim):
@@ -72,13 +72,13 @@ def build_tree(A, root: Cell, dim):
     if s > root.iLower:
         cLow = Cell(rLow_Lower, rHigh_Lower, root.iLower, s - 1)
         root.lowerCell = cLow
-        if len(A[root.iLower:s]) > 8:
+        if len(A[root.iLower : s]) > 8:
             build_tree(A, cLow, 1 - dim)
 
     if s <= root.iUpper:
         cHigh = Cell(rLow_Upper, rHigh_Upper, s, root.iUpper)
         root.upperCell = cHigh
-        if len(A[s:root.iUpper + 1]) > 8:
+        if len(A[s : root.iUpper + 1]) > 8:
             build_tree(A, cHigh, 1 - dim)
 
 
@@ -89,7 +89,7 @@ def plot_tree(axis, root: Cell, A):
     cntr = 0
     for particle in A:
         if cntr == 0:
-            axis.scatter(particle.r[0], particle.r[1], color="red", label='points')
+            axis.scatter(particle.r[0], particle.r[1], color="red", label="points")
         else:
             axis.scatter(particle.r[0], particle.r[1], color="red")
         cntr += 1
