@@ -50,10 +50,9 @@ def partition(A: np.ndarray[Any, Particle], i: int, j: int, v: np.number, d: int
 def build_tree(A, root: Cell, dim):
     """
     Builds a binary tree from a given root cell by partitioning a global list of particles.
-    :param A: global list of particles
-    :param root: initial cell containing all particles
-    :param dim: dimension to partition by
-    :return:
+    param A: global list of particles
+    param root: initial cell containing all particles
+    param dim: dimension to partition by
     """
     v = 0.5 * (root.regionLowerBound[dim] + root.regionHigherBound[dim])
     s = partition(A, root.iLower, root.iUpper, v, dim)
@@ -70,14 +69,12 @@ def build_tree(A, root: Cell, dim):
         rLow_Upper = np.array([root.regionLowerBound[0], v])
         rHigh_Upper = root.regionHigherBound
 
-    # The left cell is generated if a left partition exists and the branching continued.
     if s > root.iLower:
         cLow = Cell(rLow_Lower, rHigh_Lower, root.iLower, s - 1)
         root.lowerCell = cLow
         if len(A[root.iLower:s]) > 8:
             build_tree(A, cLow, 1 - dim)
 
-    # The right cell is generated if a right partition exists and the branching continued.
     if s <= root.iUpper:
         cHigh = Cell(rLow_Upper, rHigh_Upper, s, root.iUpper)
         root.upperCell = cHigh

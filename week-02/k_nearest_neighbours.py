@@ -91,7 +91,7 @@ def neighbor_search(
             if root.particle_is_inside(part):
                 distance_squared = dist2(part.r, ri)
                 if distance_squared < prio_queue.key() and abs(distance_squared) != 0:
-                    prio_queue.replace(distance_squared, part.r - rootParticleOffset)
+                    prio_queue.replace(distance_squared, part.r)# + rootParticleOffset)
 
 
 def dist2(
