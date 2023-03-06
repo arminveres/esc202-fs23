@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 from typing import Any
 
-from particle import Particle
-from cell import Cell
+from mylib.particle import Particle
+from mylib.cell import Cell
 
 
 def partition(A: np.ndarray[Any, Particle], i: int, j: int, v: np.number, d: int):

@@ -2,9 +2,9 @@ from typing import Any
 import numpy as np
 
 # my modules
-from cell import Cell
-from particle import Particle
-from prio_queue import PriorityQueue
+from mylib.cell import Cell
+from mylib.particle import Particle
+from mylib.prio_queue import PriorityQueue
 
 # Implement the k nearest neighbor search. Use the priority queue given in the Python template and
 # implement “replace” and “key” functions. Use the particle to cell distance function from the

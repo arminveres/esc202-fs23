@@ -1,6 +1,6 @@
 import heapq as hq
-
 import numpy as np
+
 from particle import Particle
 
 

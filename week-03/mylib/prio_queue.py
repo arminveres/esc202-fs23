@@ -1,7 +1,7 @@
 import heapq as hq
-
 import numpy as np
-from particle import Particle
+
+from mylib.particle import Particle
 
 
 class PriorityQueue:
