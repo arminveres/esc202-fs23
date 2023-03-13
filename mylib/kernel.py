@@ -31,8 +31,8 @@ def monoghan_kernel(current_radius, max_distance_h) -> int:
     PREFACTOR = NORM / max_distance_h**2
 
     if current_radius >= 0 and R_div_H < 0.5:
-        return PREFACTOR * 6 * (R_div_H ** 3) - 6 * (R_div_H**2) + 1
+        return PREFACTOR * (6 * (R_div_H ** 3) - 6 * (R_div_H**2) + 1)
     elif 0.5 <= R_div_H and R_div_H <= 1:
-        return PREFACTOR * 2 * (1 - R_div_H)**3
+        return PREFACTOR * (2 * (1 - R_div_H)**3)
     elif R_div_H > 1:
         return 0

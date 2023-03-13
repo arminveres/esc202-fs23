@@ -112,9 +112,9 @@ if __name__ == "__main__":
     # END Parallelization
     ###############################################################################################
 
-    plt.scatter(x_coords, y_coords, s=2, c=densities, cmap="autumn")
+    plt.scatter(x_coords, y_coords, s=4, c=densities, cmap="magma")
     plt.axis("equal")
     plt.colorbar()
 
-    plt.savefig(f"dens-{NO_PARTICLES}.png")
-    # plt.show()
+    # plt.savefig(f"dens-{NO_PARTICLES}.png")
+    plt.show()
