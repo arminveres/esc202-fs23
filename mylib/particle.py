@@ -9,10 +9,19 @@ class Particle:
     # TODO: (aver) add the prio queues
 
     def __init__(self, r: np.ndarray[int, int], key=-np.inf):
-        self.r = r  # positionn of the particle [x, y]
+        self.r = r  # position of the particle [x, y]
+        self.accel = 0.0
+        self.velocity = 0.0
+        self.velocity_pred = 0.0
         self.rho = 0.0  # density of the particle
         self.mass = 1
-        # ...  more properties of the particle
+        self.energy = 10
+        self.energy_pred = 0.0
+        self.energy_dot = 0.0
+        # c: speed of sound
+        self.c_speed_sound = 0.0
+
+        # h: distance to neighbout
         self.key = key  # meant as an implemetation for the priority queue
 
     def __eq__(self, other):  # for the == operator (equality)

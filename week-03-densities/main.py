@@ -61,6 +61,9 @@ if __name__ == "__main__":
     # Parallelization
     ###############################################################################################
 
+    import multiprocessing
+    from functools import reduce
+
     def worker(chunk: Particle):
         local_x_coords = []
         local_y_coords = []
@@ -97,10 +100,6 @@ if __name__ == "__main__":
         densities.extend(second_tuple[2])
         return x_coords, y_coords, densities
 
-    import multiprocessing
-    from functools import reduce
-
-    # chunk_size = 1
     chunk_size = NO_PARTICLES // 8
     chunks = [A[i:i + chunk_size] for i in range(0, len(A), chunk_size)]
     pool = multiprocessing.Pool()
