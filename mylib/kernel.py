@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 
 
 NORM = 40 / (7 * np.pi)
@@ -24,7 +25,7 @@ def gaussian_kernel(current_radius, max_distance_h):
     )
 
 
-def monoghan_kernel(r_current_radius, h_max_distance) -> int:
+def monoghan_kernel(r_current_radius, h_max_distance) -> float:
     """
     param: current_radius: radius the currently calculated particle
     param: max_distance_h: distance to farthest particle
@@ -40,8 +41,8 @@ def monoghan_kernel(r_current_radius, h_max_distance) -> int:
         return 0
 
 
-def derivative_monoghan(r_current_radius, h_max_distance):
-    PREFACTOR = (6 * NORM) / (h_max_distance**2)
+def derivative_monoghan(r_current_radius: float, h_max_distance: float) -> float:
+    PREFACTOR = (6 * NORM) / (h_max_distance**3)
     R_DIV_H = r_current_radius / h_max_distance  # pre-divide to improve performance
     if r_current_radius >= 0 and R_DIV_H < 0.5:
         PREFACTOR * (3 * (R_DIV_H**2) - 2 * R_DIV_H)
@@ -49,6 +50,4 @@ def derivative_monoghan(r_current_radius, h_max_distance):
         PREFACTOR * (-(1 - (R_DIV_H**2)))
 
 
-def gradient_monoghan(radius_a, radius_b, max_dist_h):
-    radius_ab = radius_a - radius_b
-    
+def gradient_monoghan(r_a: NDArray[np.float64], r_b: NDArray[np.float64], max_dist_h: float) -> float:

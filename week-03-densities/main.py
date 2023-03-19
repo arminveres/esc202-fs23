@@ -4,12 +4,11 @@ sys.path.append('..')
 import matplotlib.pyplot as plt
 import numpy as np
 
-from mylib.particle import Particle
+from mylib.particle import Particle, PriorityQueue
 from mylib.cell import Cell
-from mylib.prio_queue import PriorityQueue
-from mylib.neigbour_search import neighbor_search_periodic  # , neigbour_search
+from mylib.neigbour_search import neighbor_search_periodic
 from mylib.treebuild import build_tree
-from mylib.kernel import monoghan_kernel  # , top_hat_kernel
+from mylib.kernel import monoghan_kernel
 
 
 if __name__ == "__main__":
@@ -64,7 +63,7 @@ if __name__ == "__main__":
     import multiprocessing
     from functools import reduce
 
-    def worker(chunk: Particle):
+    def worker(chunk: list[Particle]):
         local_x_coords = []
         local_y_coords = []
         local_densities = []
@@ -72,15 +71,15 @@ if __name__ == "__main__":
         # do calculations on each particles in the chunks
         for particle in chunk:
             local_sum_of_mass = 0
-            prio_queue = PriorityQueue(K)
+            particle.priority_queue = PriorityQueue(K)
 
-            neighbor_search_periodic(prio_queue, root, A, particle.r, [1, 1])
+            neighbor_search_periodic(particle.priority_queue, root, A, particle.r, [1, 1])
 
-            H = np.sqrt(prio_queue.key())
+            H = np.sqrt(particle.priority_queue.key())
             for i in range(K):
-                R = np.sqrt(-prio_queue._queue[i].key)
+                R = np.sqrt(-particle.priority_queue._queue[i].key)
                 # get the mass of each neighbours
-                mass = prio_queue._queue[i].mass
+                mass = particle.priority_queue._queue[i].mass
                 # rho = mass * top_hat_kernel(R, H)
                 rho = mass * monoghan_kernel(R, H)
                 local_sum_of_mass += rho
@@ -93,7 +92,7 @@ if __name__ == "__main__":
 
         return local_x_coords, local_y_coords, local_densities
 
-    def my_reducer(first_tuple: ([], [], []), second_tuple: ([], [], [])):
+    def my_reducer(first_tuple, second_tuple):
         x_coords, y_coords, densities = first_tuple
         x_coords.extend(second_tuple[0])
         y_coords.extend(second_tuple[1])

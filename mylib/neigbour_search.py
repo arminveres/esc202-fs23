@@ -1,10 +1,10 @@
 from typing import Any
 import numpy as np
+from numpy.typing import NDArray
 
 # my modules
 from mylib.cell import Cell
-from mylib.particle import Particle
-from mylib.prio_queue import PriorityQueue
+from mylib.particle import Particle, PriorityQueue
 
 # Implement the k nearest neighbor search. Use the priority queue given in the Python template and
 # implement “replace” and “key” functions. Use the particle to cell distance function from the
@@ -15,9 +15,9 @@ from mylib.prio_queue import PriorityQueue
 def neighbor_search_periodic(
     prio_queue: PriorityQueue,
     root: Cell,
-    particles: np.ndarray[Any, Particle],
-    r: np.ndarray[int, int],
-    period,
+    particles: list[Particle],
+    r: NDArray[np.float64],
+    period: NDArray[np.float64]
 ):
     # walk the closest image first (at offset=[0, 0])
     for y in [0.0, -period[1], period[1]]:
@@ -29,9 +29,9 @@ def neighbor_search_periodic(
 def neighbor_search(
     prio_queue: PriorityQueue,
     root: Cell,
-    particles: np.ndarray[Any, Particle],
-    rootParticle: np.ndarray[int, int],
-    rootParticleOffset: np.ndarray[int, int],
+    particles: list[Particle],
+    rootParticle: NDArray[np.float64],
+    rootParticleOffset: NDArray[np.float64],
 ):
     """
     Do a nearest neighbor search for particle at 'r' in the tree 'root' using the priority queue
@@ -42,7 +42,7 @@ def neighbor_search(
     if root is None:
         return
 
-    ri: np.ndarray[int, int] = rootParticle + rootParticleOffset
+    ri: NDArray[np.float64] = rootParticle + rootParticleOffset
 
     if root.lowerCell is not None and root.upperCell is not None:
         d2_lower = dist2(root.lowerCell.rc, ri)
@@ -97,8 +97,8 @@ def neighbor_search(
 
 
 def dist2(
-    center_pos: np.ndarray[np.number, np.number],
-    particle_pos: np.ndarray[np.number, np.number],
+    center_pos: NDArray[np.float64],
+    particle_pos: NDArray[np.float64]
 ):
     """
     Euclidian/square distance of 2 particles

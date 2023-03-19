@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 
 # from particle import Particle
 from mylib.particle import Particle
@@ -11,8 +12,8 @@ class Cell:
 
     def __init__(
         self,
-        regionLowerBound: np.ndarray[int, int],
-        regionHigherBound: np.ndarray[int, int],
+        regionLowerBound: NDArray[np.float64],
+        regionHigherBound: NDArray[np.float64],
         lower_index: int,
         upper_index: int,
     ):
@@ -24,7 +25,7 @@ class Cell:
         self.upperCell = None  # reference to tree cell for upper part
         self.rc = self._center()
 
-    def celldist2(self, r: np.ndarray[int, int]):
+    def celldist2(self, r: NDArray[np.float64]):
         """
         Calculates the squared minimum distance between a particle
         position and this node(cell).
@@ -44,14 +45,14 @@ class Cell:
             (particle.r[1] > self.regionLowerBound[1])
         )
 
-    def _center(self) -> np.ndarray[int, int]:
+    def _center(self) -> NDArray[np.float64]:
         """
         Return the centre of the cell
         """
-        return [
+        return np.array([
             (self.regionLowerBound[0] + self.regionHigherBound[0]) / 2,
             (self.regionLowerBound[1] + self.regionHigherBound[1]) / 2,
-        ]
+        ])
 
     def __repr__(self):
         return f" {self.regionLowerBound}, {self.regionHigherBound}, {self.iLower}, {self.iUpper}\n"
