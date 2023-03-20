@@ -3,20 +3,21 @@ import heapq as hq
 
 from numpy.typing import NDArray
 
+
 class Particle:
     """
     Particle class with corresponding properties.
     """
 
     # def __init__(self, r: np.ndarray[int, int], key=-np.inf):
-    def __init__(self, r: NDArray[np.float64],  key=-np.inf):
+    def __init__(self, r: NDArray[np.float64], key=-np.inf):
         self.r = r  # position of the particle [x, y]
         self.accel = np.zeros((2))
         self.velocity = np.zeros((2))
         self.velocity_pred = np.zeros((2))
         self.rho = 0.0  # density of the particle
         self.mass = 1.0
-        self.energy = 10.0 #np.random.random((1))
+        self.energy = 10.0  # np.random.random((1))
         self.energy_pred = np.zeros((1))
         self.energy_dot = np.zeros((1))
         # c: speed of sound
@@ -47,6 +48,7 @@ class Particle:
     def __repr__(self):
         return f"Pos: {self.r}, Dens: {self.rho}, PQ Key: {self.key}\n"
 
+
 class PriorityQueue:
     """
     Priority Queue using the heapq algorithm
@@ -69,12 +71,12 @@ class PriorityQueue:
         # need to reverse the minus sign, since the heapq returns the smallest item at 0 position
         return -self._queue[0].key
 
-    def replace(self, distance: int, coordinates: NDArray[np.float64]) -> Particle:
+    def replace(self, particle: Particle) -> Particle:
         """
         Replaces the head(largest) element with given 'item', and returns it
         """
-        particle = Particle(coordinates, -distance)
         return hq.heapreplace(self._queue, particle)
 
     def get_max_distance(self):
-        return np.sqrt(-hq.nsmallest(1, self._queue)[0].key)
+        # return np.sqrt(-hq.nsmallest(1, self._queue)[0].key)
+        return np.sqrt(self.key())

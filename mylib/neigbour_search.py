@@ -92,8 +92,9 @@ def neighbor_search(
     else:  # root is a leaf cell
         for part in particles[root.iLower: root.iUpper + 1]:
             distance_squared = dist2(part.r, ri)
-            if distance_squared < prio_queue.key():
-                prio_queue.replace(distance_squared, part.r)
+            if distance_squared < prio_queue.key() and distance_squared != 0.0:
+                part.key = -distance_squared
+                prio_queue.replace(part)
 
 
 def dist2(
