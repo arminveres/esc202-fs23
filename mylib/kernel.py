@@ -40,7 +40,6 @@ def monoghan_kernel(r_current_radius, h_max_distance) -> float:
     elif R_DIV_H > 1:
         return 0
     raise ValueError
-    # return 0
 
 
 def derivative_monoghan(r_current_radius: float, h_max_distance: float) -> float:
@@ -50,19 +49,12 @@ def derivative_monoghan(r_current_radius: float, h_max_distance: float) -> float
         return PREFACTOR * (3 * (R_DIV_H**2) - 2 * R_DIV_H)
     elif 0.5 <= R_DIV_H and R_DIV_H <= 1:
         return PREFACTOR * (-(1 - (R_DIV_H**2)))
-    return 0
-
-    # if r_current_radius >= 0 and R_DIV_H < 0.5:
-    #     return (3 * (R_DIV_H**2) - 2 * R_DIV_H)
-    # elif 0.5 <= R_DIV_H and R_DIV_H <= 1:
-    #     return (-(1 - (R_DIV_H**2)))
-    # return 0
+    return 0.0
 
 
 def gradient_monoghan(r_a: NDArray[np.float64], r_b: NDArray[np.float64], max_dist_h: float) -> float:
     pos_diff = r_a - r_b
-    # abs_pos_diff = np.sqrt(pos_diff.dot(pos_diff))
-    abs_pos_diff = np.linalg.norm(pos_diff)
+    abs_pos_diff = np.sqrt(pos_diff.dot(pos_diff))
     derivative = derivative_monoghan(abs_pos_diff, max_dist_h)
-    gradient = (derivative * pos_diff) / abs_pos_diff
+    gradient = derivative * pos_diff / abs_pos_diff
     return gradient

@@ -9,7 +9,6 @@ class Particle:
     Particle class with corresponding properties.
     """
 
-    # def __init__(self, r: np.ndarray[int, int], key=-np.inf):
     def __init__(self, r: NDArray[np.float64], key=-np.inf):
         self.r = r  # position of the particle [x, y]
         self.accel = np.zeros((2))
@@ -22,10 +21,9 @@ class Particle:
         self.energy_dot = np.zeros((1))
         # c: speed of sound
         self.c_speed_sound = np.zeros((1))
-
-        self.priority_queue: PriorityQueue = None
         # h: distance to neighbout
         self.key = key  # meant as an implemetation for the priority queue
+        self.priority_queue: PriorityQueue = None
 
     def __eq__(self, other):  # for the == operator (equality)
         return self.key == other.key
@@ -46,7 +44,12 @@ class Particle:
         return self.key >= other.key
 
     def __repr__(self):
-        return f"Pos: {self.r}, Dens: {self.rho}, PQ Key: {self.key}\n"
+        return f"Posisition: {self.r}\n\
+Accel:          {self.accel}\n\
+Velocity:       {self.velocity}\n\
+Speed of Sound: {self.c_speed_sound}\n\
+Dens:           {self.rho}\n\
+PQ Key:         {self.key}\n"
 
 
 class PriorityQueue:

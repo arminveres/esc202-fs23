@@ -5,7 +5,7 @@ from mylib.kernel import gradient_monoghan, monoghan_kernel
 from mylib.treebuild import build_tree
 from mylib.particle import Particle, PriorityQueue
 
-counter = 0
+frame_counter = 0
 
 
 class SPH:
@@ -14,18 +14,21 @@ class SPH:
         self.dt = timestep
         self.gamma = 2
         self.__smallest_radius = np.inf
-        self.__largest_soundspeed = 0.0
+        self.__largest_soundspeed = -np.inf
         # generate particles
         self.PARTICLES: list[Particle] = [Particle(np.random.rand(2))
                                           for _ in range(self.no_particles)]
-        self.PARTICLES[4].energy = 1000
+        self.PARTICLES[4].energy = 100.0
 
     def pi_ab(self, part_a: Particle, part_b: Particle) -> float:
+        """
+        Calculates artificial viscosity
+        """
         ETA = 1e-3
         ALPHA = 1.0
         BETA = 2 * ALPHA
-        r_ab = np.sqrt(part_a.r.dot(part_b.r))
-        v_ab = np.sqrt(part_a.velocity.dot(part_b.velocity))
+        r_ab = part_a.r.dot(part_b.r)
+        v_ab = part_a.velocity.dot(part_b.velocity)
 
         q = v_ab * r_ab
         if q < 0:
@@ -33,7 +36,6 @@ class SPH:
             h_ab = 0.5 * (part_a.priority_queue.key() + part_b.priority_queue.key())
             rho_ab = 0.5 * (part_a.rho + part_b.rho)
             mu_ab = (h_ab * v_ab * r_ab) / (r_ab**2 + ETA**2)
-            # print(r_ab, v_ab, c_ab, h_ab, rho_ab, mu_ab)
             return (- ALPHA * c_ab * mu_ab + BETA * mu_ab ** 2) / rho_ab
 
         elif q >= 0:
@@ -43,8 +45,7 @@ class SPH:
         for particle in self.PARTICLES:
             particle.r += particle.velocity * delta
             # maybe we should wrap around our area and take the absolute value!
-            particle.r[0] = particle.r[0] % 1.0
-            particle.r[1] = particle.r[1] % 1.0
+            particle.r = particle.r % 1.0
 
             particle.velocity_pred = particle.velocity + particle.accel * delta
             particle.energy_pred = particle.energy + particle.energy_dot * delta
@@ -53,15 +54,16 @@ class SPH:
         for particle in self.PARTICLES:
             particle.r += particle.velocity * delta
             # maybe we should wrap around our area and take the absolute value!
-            particle.r[0] = particle.r[0] % 1.0
-            particle.r[1] = particle.r[1] % 1.0
+            particle.r = particle.r % 1.0
 
     def __kick(self, delta=0):
         for particle in self.PARTICLES:
             particle.velocity += particle.accel * delta
             particle.energy += particle.energy_dot * delta
+            if particle.energy < 0.:
+                print(particle.energy, particle.velocity)
 
-    def __nn_density(self):
+    def __nn_density(self, calc_dt):
         ###########################################################################
         # Treebuild
         ###########################################################################
@@ -71,7 +73,6 @@ class SPH:
             lower_index=0,
             upper_index=len(self.PARTICLES) - 1,
         )
-
         build_tree(self.PARTICLES, root, 0)
 
         ###########################################################################
@@ -86,76 +87,69 @@ class SPH:
                                      self.PARTICLES, particle.r, np.array([1, 1]))
 
             H = np.sqrt(particle.priority_queue.key())
-            # print(f"Frame: {counter}, nnsearch H: {H}")
             for i in range(K):
                 R = np.sqrt(-particle.priority_queue._queue[i].key)
-                # get the mass of each neighbours
                 mass = particle.priority_queue._queue[i].mass
                 rho += mass * monoghan_kernel(R, H)
-
-            # FIXME: (avee) This may result in 0, which in turn generates a division by zero error
-            # at line 83
             particle.rho = rho
 
             # calcsound
             try:
                 particle.c_speed_sound = np.sqrt(particle.energy * self.gamma * (self.gamma - 1))
+            # particle.c_speed_sound = np.sqrt(particle.energy_pred * self.gamma * (self.gamma - 1))
             except RuntimeWarning:
-                print(f"got {particle.energy}, {particle.c_speed_sound}")
+                particle.c_speed_sound = np.sqrt(np.abs(particle.energy) * self.gamma * (self.gamma - 1))
+                print(f"Negative Energy: {particle.energy}, {particle.energy_pred}, {particle.c_speed_sound} on particle")
 
-            self.__largest_soundspeed = particle.c_speed_sound \
-                if particle.c_speed_sound > self.__largest_soundspeed \
-                else self.__largest_soundspeed
+            if calc_dt:
+                self.__largest_soundspeed = particle.c_speed_sound \
+                    if particle.c_speed_sound > self.__largest_soundspeed \
+                    else self.__largest_soundspeed
 
-    def __nn_sphforces(self):
+    def __nn_sphforces(self, calc_dt):
         for particle in self.PARTICLES:
-            self.__smallest_radius = particle.priority_queue.get_max_distance() \
-                if self.__smallest_radius > particle.priority_queue.get_max_distance() \
-                else self.__smallest_radius
+            # reset particle properties
+            particle.energy_dot = 0
+            particle.accel = 0
 
+            if calc_dt:
+                self.__smallest_radius = particle.priority_queue.get_max_distance() \
+                    if self.__smallest_radius > particle.priority_queue.get_max_distance() \
+                    else self.__smallest_radius
+
+            # BUG: How to fix fa/fb being infinite?
             f_a = (particle.c_speed_sound ** 2) / (self.gamma * particle.rho)
-
             h_max = particle.priority_queue.get_max_distance()  # current max distance
-            # print(f"Frame: {counter}, sphforce H: {h_max}")
 
             for near_particle in particle.priority_queue._queue:  # foreach neighbour
-                if (particle.r != near_particle.r).all():  # skip if the same particle
+                if (particle.r == near_particle.r).all():  # skip if the same particle
+                    continue
 
-                    f_b = (near_particle.c_speed_sound ** 2) / (self.gamma * near_particle.rho)
+                f_b = (near_particle.c_speed_sound ** 2) / (self.gamma * near_particle.rho)
 
-                    particle.energy_dot += \
-                        near_particle.mass * (particle.velocity - near_particle.velocity).dot(
-                            gradient_monoghan(particle.r, near_particle.r, h_max))
+                particle.energy_dot += \
+                    near_particle.mass * (particle.velocity - near_particle.velocity).dot(
+                        gradient_monoghan(particle.r, near_particle.r, h_max))
 
-                    # FIXME: particles disappear and likely cause is energy_dot being negative
-                    if np.isnan(particle.energy_dot.all()):
-                        print(particle.energy_dot)
+                # FIXME: particles disappear and likely cause is energy_dot being negative
+                if np.isnan(particle.energy_dot.all()):
+                    print('nan found:', particle.energy_dot)
 
-                    try:
-                        # dva/dt
-                        particle.accel -= \
-                            near_particle.mass * (
-                                f_a + f_b  # + self.pi_ab(particle, near_particle)
-                            ) * gradient_monoghan(particle.r, near_particle.r, h_max)
-                    except RuntimeWarning:
-                        print(f"dvadt, following values encountered")
-                        print(f"mass: {near_particle.mass}, fa: {f_a}, fb: {f_b}, partaccel: {particle.accel}")
-
-                    if np.isnan(particle.accel.all()):
-                        print(f"particle accel: {particle.accel}")
-
-            try:
-                particle.energy_dot *= f_a
-            except RuntimeWarning:
-                print(f"Overflow on energy dot: {particle.energy_dot}")
+                visc = self.pi_ab(particle, near_particle)
+                particle.accel -= \
+                    near_particle.mass * (
+                        f_a + f_b + visc
+                    ) * gradient_monoghan(particle.r, near_particle.r, h_max)
+            particle.energy_dot *= f_a
 
         ###########################################################################
 
-    def __calculate_forces(self):
+    def __calculate_forces(self, calc_dt):
         # TODO: (avee) parallelize this part !!!
-        self.__nn_density()
-        self.__nn_sphforces()
-        self.dt = self.__smallest_radius / self.__largest_soundspeed / 3
+        self.__nn_density(calc_dt)
+        self.__nn_sphforces(calc_dt)
+        if calc_dt:
+            self.dt = self.__smallest_radius / self.__largest_soundspeed / 3
 
     def run(self, nsteps: int):
         self.__drift_one()
@@ -171,12 +165,12 @@ class SPH:
 
     def first_step(self):
         self.__drift_one()
-        self.__calculate_forces()
+        self.__calculate_forces(calc_dt=False)
 
     def update(self):
+        global frame_counter
         self.__drift_one(self.dt / 2)
-        self.__calculate_forces()
+        self.__calculate_forces(calc_dt=False)
         self.__kick(self.dt)
         self.__drift_two(self.dt / 2)
-        global counter
-        counter += 1
+        frame_counter += 1
