@@ -1,24 +1,25 @@
 import numpy as np
-from mylib.cell import Cell
-from mylib.neigbour_search import neighbor_search_periodic
-from mylib.kernel import gradient_monoghan, monoghan_kernel
-from mylib.treebuild import build_tree
-from mylib.particle import Particle, PriorityQueue
+from .cell import Cell
+from .neigbour_search import neighbor_search_periodic
+from .kernel import gradient_monoghan, monoghan_kernel
+from .treebuild import build_tree
+from .particle import Particle, PriorityQueue
 
 frame_counter = 0
 
 
 class SPH:
-    def __init__(self, no_particles, timestep):
+    def __init__(self, no_particles, timestep, calc_dt=False):
         self.no_particles = no_particles
         self.dt = timestep
         self.gamma = 2
         self.__smallest_radius = np.inf
         self.__largest_soundspeed = -np.inf
+        self.__calc_dt=calc_dt
         # generate particles
         self.PARTICLES: list[Particle] = [Particle(np.random.rand(2))
                                           for _ in range(self.no_particles)]
-        self.PARTICLES[4].energy = 100.0
+        # self.PARTICLES[4].energy = 1000.0
 
     def pi_ab(self, part_a: Particle, part_b: Particle) -> float:
         """
@@ -44,7 +45,7 @@ class SPH:
     def __drift_one(self, delta=0):
         for particle in self.PARTICLES:
             particle.r += particle.velocity * delta
-            # maybe we should wrap around our area and take the absolute value!
+            # we should wrap around our area and take the absolute value!
             particle.r = particle.r % 1.0
 
             particle.velocity_pred = particle.velocity + particle.accel * delta
@@ -53,7 +54,7 @@ class SPH:
     def __drift_two(self, delta=0):
         for particle in self.PARTICLES:
             particle.r += particle.velocity * delta
-            # maybe we should wrap around our area and take the absolute value!
+            # we should wrap around our area and take the absolute value!
             particle.r = particle.r % 1.0
 
     def __kick(self, delta=0):
@@ -61,9 +62,9 @@ class SPH:
             particle.velocity += particle.accel * delta
             particle.energy += particle.energy_dot * delta
             if particle.energy < 0.:
-                print(particle.energy, particle.velocity)
+                print("particle energy therefore dot < 0",particle.energy, particle.velocity, particle.energy_dot)
 
-    def __nn_density(self, calc_dt):
+    def __nn_density(self):
         ###########################################################################
         # Treebuild
         ###########################################################################
@@ -98,21 +99,23 @@ class SPH:
                 particle.c_speed_sound = np.sqrt(particle.energy * self.gamma * (self.gamma - 1))
             # particle.c_speed_sound = np.sqrt(particle.energy_pred * self.gamma * (self.gamma - 1))
             except RuntimeWarning:
-                particle.c_speed_sound = np.sqrt(np.abs(particle.energy) * self.gamma * (self.gamma - 1))
-                print(f"Negative Energy: {particle.energy}, {particle.energy_pred}, {particle.c_speed_sound} on particle")
+                particle.c_speed_sound = np.sqrt(
+                    np.abs(particle.energy) * self.gamma * (self.gamma - 1))
+                print(
+                    f"Negative Energy: {particle.energy}, {particle.energy_pred}, {particle.c_speed_sound} on particle")
 
-            if calc_dt:
+            if self.__calc_dt:
                 self.__largest_soundspeed = particle.c_speed_sound \
                     if particle.c_speed_sound > self.__largest_soundspeed \
                     else self.__largest_soundspeed
 
-    def __nn_sphforces(self, calc_dt):
+    def __nn_sphforces(self):
         for particle in self.PARTICLES:
             # reset particle properties
             particle.energy_dot = 0
             particle.accel = 0
 
-            if calc_dt:
+            if self.__calc_dt:
                 self.__smallest_radius = particle.priority_queue.get_max_distance() \
                     if self.__smallest_radius > particle.priority_queue.get_max_distance() \
                     else self.__smallest_radius
@@ -120,6 +123,8 @@ class SPH:
             # BUG: How to fix fa/fb being infinite?
             f_a = (particle.c_speed_sound ** 2) / (self.gamma * particle.rho)
             h_max = particle.priority_queue.get_max_distance()  # current max distance
+            if h_max <= 0:
+                print("H max smaller equal than 0", h_max)
 
             for near_particle in particle.priority_queue._queue:  # foreach neighbour
                 if (particle.r == near_particle.r).all():  # skip if the same particle
@@ -127,6 +132,7 @@ class SPH:
 
                 f_b = (near_particle.c_speed_sound ** 2) / (self.gamma * near_particle.rho)
 
+                # calculate energy_dot
                 particle.energy_dot += \
                     near_particle.mass * (particle.velocity - near_particle.velocity).dot(
                         gradient_monoghan(particle.r, near_particle.r, h_max))
@@ -135,20 +141,21 @@ class SPH:
                 if np.isnan(particle.energy_dot.all()):
                     print('nan found:', particle.energy_dot)
 
+                # add acceleration
                 visc = self.pi_ab(particle, near_particle)
-                particle.accel -= \
-                    near_particle.mass * (
+                particle.accel +=  near_particle.mass * (
                         f_a + f_b + visc
                     ) * gradient_monoghan(particle.r, near_particle.r, h_max)
+
+            particle.accel *= -1
             particle.energy_dot *= f_a
 
         ###########################################################################
 
-    def __calculate_forces(self, calc_dt):
-        # TODO: (avee) parallelize this part !!!
-        self.__nn_density(calc_dt)
-        self.__nn_sphforces(calc_dt)
-        if calc_dt:
+    def __calculate_forces(self):
+        self.__nn_density()
+        self.__nn_sphforces()
+        if self.__calc_dt:
             self.dt = self.__smallest_radius / self.__largest_soundspeed / 3
 
     def run(self, nsteps: int):
@@ -165,12 +172,12 @@ class SPH:
 
     def first_step(self):
         self.__drift_one()
-        self.__calculate_forces(calc_dt=False)
+        self.__calculate_forces()
 
     def update(self):
         global frame_counter
         self.__drift_one(self.dt / 2)
-        self.__calculate_forces(calc_dt=False)
+        self.__calculate_forces()
         self.__kick(self.dt)
         self.__drift_two(self.dt / 2)
         frame_counter += 1

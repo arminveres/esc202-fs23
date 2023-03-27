@@ -80,6 +80,6 @@ class PriorityQueue:
         """
         return hq.heapreplace(self._queue, particle)
 
-    def get_max_distance(self):
+    def get_max_distance(self) -> float:
         # return np.sqrt(-hq.nsmallest(1, self._queue)[0].key)
         return np.sqrt(self.key())

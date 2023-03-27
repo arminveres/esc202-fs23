@@ -5,14 +5,14 @@ from mylib.sph import SPH
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 
+# let all warnings be known as errors for debugging
 import warnings
 warnings.filterwarnings("error")
 
 if __name__ == "__main__":
 
     NO_PARTICLES = 100
-    # smallest radius divided by c divide by 3
-    sph_run = SPH(NO_PARTICLES, 0.00005)
+    sph_run = SPH(NO_PARTICLES, 0.0003)
 
     fig, axs = plt.subplots()
     dim_0 = [sph_run.PARTICLES[i].r[0]
