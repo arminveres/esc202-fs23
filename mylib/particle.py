@@ -11,16 +11,16 @@ class Particle:
 
     def __init__(self, r: NDArray[np.float64], key=-np.inf):
         self.r = r  # position of the particle [x, y]
-        self.accel = np.zeros((2))
-        self.velocity = np.zeros((2))
-        self.velocity_pred = np.zeros((2))
+        self.accel = np.array([0.0, 0.0])
+        self.velocity = np.array([0.0, 0.0])
+        self.velocity_pred = np.array([0.0, 0.0])
         self.rho = 0.0  # density of the particle
         self.mass = 1.0
         self.energy = 10.0  # np.random.random((1))
-        self.energy_pred = np.zeros((1))
-        self.energy_dot = np.zeros((1))
+        self.energy_pred = 0.0  # np.zeros((1))
+        self.energy_dot = 0.0  # np.zeros((1))
         # c: speed of sound
-        self.c_speed_sound = np.zeros((1))
+        self.c_speed_sound = 0.0  # np.zeros((1))
         # h: distance to neighbout
         self.key = key  # meant as an implemetation for the priority queue
         self.priority_queue: PriorityQueue = None
@@ -81,5 +81,4 @@ class PriorityQueue:
         return hq.heapreplace(self._queue, particle)
 
     def get_max_distance(self) -> float:
-        # return np.sqrt(-hq.nsmallest(1, self._queue)[0].key)
         return np.sqrt(self.key())

@@ -34,4 +34,5 @@ if __name__ == "__main__":
 
     ani = FuncAnimation(fig, update, frames=range(100), interval=100, repeat=False)
     ani.save(f'sph_{NO_PARTICLES}.mp4')
+
     # plt.show()
