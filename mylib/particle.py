@@ -47,6 +47,10 @@ class Particle:
         return f"Posisition: {self.r}\n\
 Accel:          {self.accel}\n\
 Velocity:       {self.velocity}\n\
+Velocity Pred:  {self.velocity_pred}\n\
+Energy:         {self.energy}\n\
+Energy Pred:    {self.energy_pred}\n\
+Energy dot:     {self.energy_dot}\n\
 Speed of Sound: {self.c_speed_sound}\n\
 Dens:           {self.rho}\n\
 PQ Key:         {self.key}\n"

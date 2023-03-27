@@ -63,7 +63,6 @@ class SPH:
 
             particle.velocity_pred = particle.velocity + particle.accel * delta
             particle.energy_pred = particle.energy + particle.energy_dot * delta
-            # print(particle.energy_pred, particle.energy_dot)
 
     def __drift_two(self, delta=0):
         for particle in self.PARTICLES:
@@ -108,15 +107,13 @@ class SPH:
                 rho += mass * monoghan_kernel(R, H)
             particle.rho = rho
 
-            # calcsound
+            # calcsound, crash if negative energy
             try:
                 particle.c_speed_sound = np.sqrt(
                     particle.energy_pred * self.gamma * (self.gamma - 1)
                 )
             except RuntimeWarning:
-                print(
-                    f"Negative Energy:\ne: {particle.energy}, e_pred: {particle.energy_pred},\nc: {particle.c_speed_sound} on particle"
-                )
+                print("particle: ", particle)
                 particle.c_speed_sound = np.sqrt(
                     particle.energy_pred * self.gamma * (self.gamma - 1)
                 )
@@ -129,9 +126,9 @@ class SPH:
                 )
 
     def __nn_sphforces(self):
-        self.__smallest_radius = np.inf  # reset radius
+        self.__smallest_radius = np.inf  # reset radius only at each step
         for particle in self.PARTICLES:
-            # reset particle properties
+            # reset particle properties on each particle
             particle.energy_dot = 0
             particle.accel = np.array([0.0, 0.0])
 
@@ -158,10 +155,6 @@ class SPH:
                 particle.energy_dot += near_particle.mass * (
                     particle.velocity_pred - near_particle.velocity_pred
                 ).dot(grad)
-
-                # if particle.energy_dot < 0:
-                #     print(f"edot: {particle.energy_dot}, particle vel: {particle.velocity_pred}")
-                #     print(f"near_particle vel: {near_particle.velocity_pred}, grad: {grad}")
 
                 # add acceleration
                 visc = self.pi_ab(particle, near_particle)
